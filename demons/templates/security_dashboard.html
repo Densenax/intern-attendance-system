@@ -1,0 +1,373 @@
+{% extends 'components/layout.html' %}
+{% load static %}
+
+{% block content %}
+<div class="flex flex-col bg-gray-50 h-screen overflow-hidden">
+    <div class="p-8 h-full flex flex-col">
+        <h1 class="text-3xl font-bold text-gray-900 mb-8">Dashboard</h1>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <!-- Total Check-ins and Check-outs -->
+            <div class="bg-gradient-to-br from-pink-50 to-pink-100 rounded-lg shadow-md p-6 border-t-4 border-pink-500">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">Total</h2>
+                <div class="flex justify-between">
+                    <div>
+                        <p class="text-sm text-gray-600">Check-ins</p>
+                        <p class="text-2xl font-bold text-pink-600">{{ total_check_ins }}</p>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-600">Check-outs</p>
+                        <p class="text-2xl font-bold text-pink-600">{{ total_check_outs }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Students Check-ins and Check-outs -->
+            <div class="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg shadow-md p-6 border-t-4 border-blue-500">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">Students</h2>
+                <div class="flex justify-between">
+                    <div>
+                        <p class="text-sm text-gray-600">Check-ins</p>
+                        <p class="text-2xl font-bold text-blue-600">{{ student_check_ins }}</p>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-600">Check-outs</p>
+                        <p class="text-2xl font-bold text-blue-600">{{ student_check_outs }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Employees Check-ins and Check-outs -->
+            <div class="bg-gradient-to-br from-green-50 to-green-100 rounded-lg shadow-md p-6 border-t-4 border-green-500">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">Employees</h2>
+                <div class="flex justify-between">
+                    <div>
+                        <p class="text-sm text-gray-600">Check-ins</p>
+                        <p class="text-2xl font-bold text-green-600">{{ employee_check_ins }}</p>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-600">Check-outs</p>
+                        <p class="text-2xl font-bold text-green-600">{{ employee_check_outs }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Visitors Check-ins and Check-outs -->
+            <div class="bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg shadow-md p-6 border-t-4 border-purple-500">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">Visitors</h2>
+                <div class="flex justify-between">
+                    <div>
+                        <p class="text-sm text-gray-600">Check-ins</p>
+                        <p class="text-2xl font-bold text-purple-600">{{ visitor_check_ins }}</p>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-600">Check-outs</p>
+                        <p class="text-2xl font-bold text-purple-600">{{ visitor_check_outs }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="scannerLogContainer" class="flex flex-col lg:flex-row gap-8 flex-grow overflow-hidden">
+            <!-- QR Code Scanner -->
+            <div id="qrScannerSection" class="lg:w-1/2 flex flex-col h-full">
+                <h2 class="text-xl font-semibold text-gray-900 mb-4">QR Code Scanner</h2>
+                <div class="bg-white rounded-lg shadow-md p-4 flex flex-col h-full">
+                    <div class="flex flex-col lg:flex-row gap-4 h-full">
+                        <div id="videoContainer" class="relative w-full lg:w-1/2 aspect-video">
+                            <video id="video" class="absolute inset-0 w-full h-full object-cover rounded-lg"></video>
+                            <div class="absolute inset-0 border-2 border-pink-400 rounded-lg pointer-events-none">
+                                <div class="absolute inset-0 border-2 border-transparent rounded-lg">
+                                    <div class="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-pink-500"></div>
+                                    <div class="absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-pink-500"></div>
+                                    <div class="absolute bottom-0 left-0 w-4 h-4 border-b-2 border-l-2 border-pink-500"></div>
+                                    <div class="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-pink-500"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="notificationArea" class="w-full lg:w-1/2 flex flex-col">
+                            <div id="scanResult" class="flex-grow overflow-y-auto"></div>
+                            <div id="error" class="mt-4 hidden"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Log -->
+            <div id="recentLogSection" class="lg:w-1/2 flex flex-col h-full">
+                <h2 class="text-xl font-semibold text-gray-900 mb-4">Recent Log</h2>
+                <div id="recentLogContainer" class="bg-white rounded-lg shadow-md p-4 flex flex-col h-full">
+                    <div id="recentActivity" class="flex-grow overflow-y-auto">
+                        <!-- Activity items will be inserted here by JavaScript -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.3.1/dist/jsQR.min.js"></script>
+<script>
+    const video = document.getElementById('video');
+    const scanResult = document.getElementById('scanResult');
+    const error = document.getElementById('error');
+    const recentActivity = document.getElementById('recentActivity');
+    const videoContainer = document.getElementById('videoContainer');
+    const notificationArea = document.getElementById('notificationArea');
+
+    let scanning = false;
+    let lastScanTime = 0;
+    const scanCooldown = 5000; // 5 seconds
+    const maxRecentActivities = 50; // Maximum number of recent activities to store
+
+    async function initializeCamera() {
+        try {
+            console.log("Initializing camera...");
+            const devices = await navigator.mediaDevices.enumerateDevices();
+            const videoDevices = devices.filter(device => device.kind === 'videoinput');
+            
+            const rearCamera = videoDevices.find(device => /(back|rear)/i.test(device.label));
+            const selectedDevice = rearCamera || videoDevices[0];
+            
+            if (!selectedDevice) {
+                throw new Error('No camera found');
+            }
+            
+            const constraints = {
+                video: {
+                    deviceId: selectedDevice.deviceId,
+                    facingMode: rearCamera ? "environment" : "user",
+                    width: { ideal: 1280 },
+                    height: { ideal: 720 }
+                }
+            };
+            
+            const stream = await navigator.mediaDevices.getUserMedia(constraints);
+            console.log("Camera stream obtained");
+            video.srcObject = stream;
+            video.setAttribute("playsinline", true);
+            await video.play();
+            console.log("Video playback started");
+            scanning = true;
+            requestAnimationFrame(tick);
+        } catch (err) {
+            console.error('Error accessing camera:', err);
+            displayError('Failed to access camera. Please make sure it\'s connected and permissions are granted. Error: ' + err.message);
+        }
+    }
+
+    function displayRecentActivities() {
+        recentActivity.innerHTML = '';
+        const recentActivities = JSON.parse(localStorage.getItem('recentActivities')) || [];
+
+        recentActivities.forEach(activity => {
+            const activityItem = document.createElement('div');
+            activityItem.className = `flex-shrink-0 w-full p-3 rounded-lg mb-3 ${activity.action === 'Checked In' ? 'bg-green-50' : 'bg-red-50'}`;
+
+            const profilePhotoUrl = activity.profile_photo ? 
+                (activity.profile_photo.startsWith('http') || activity.profile_photo.startsWith('/media/') ? 
+                    activity.profile_photo : 
+                    '/media/' + activity.profile_photo.replace(/^media\//, '')) : 
+                null;
+        
+            activityItem.innerHTML = `
+                <div class="flex items-center">
+                    ${profilePhotoUrl ? 
+                        `<img src="${profilePhotoUrl}" alt="${activity.name}" class="w-12 h-12 rounded-full object-cover mr-3">` :
+                        `<div class="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center mr-3">
+                            <span class="text-gray-500 text-xl">${activity.name.charAt(0)}</span>
+                        </div>`
+                    }
+                    <div class="flex-grow min-w-0">
+                        <div class="font-medium text-gray-900 truncate">${activity.name}</div>
+                        <div class="text-sm text-gray-600 truncate">${activity.user_id} - ${activity.additional_info}</div>
+                        <div class="text-sm ${activity.action === 'Checked In' ? 'text-green-600' : 'text-red-600'}">${activity.action}</div>
+                        <div class="text-xs text-gray-500">${new Date(activity.timestamp).toLocaleString()}</div>
+                    </div>
+                </div>
+            `;
+            recentActivity.appendChild(activityItem);
+        });
+        adjustHeights();
+    }
+
+    function updateRecentActivity(data) {
+        const activityItem = {
+            name: data.name,
+            user_id: data.user_id,
+            additional_info: data.additional_info,
+            action: data.action,
+            timestamp: new Date().toISOString(),
+            profile_photo: data.profile_photo ? 
+                (data.profile_photo.startsWith('http') || data.profile_photo.startsWith('/media/') ? 
+                    data.profile_photo : 
+                    '/media/' + data.profile_photo.replace(/^media\//, '')) : 
+                null
+        };
+
+        let recentActivities = JSON.parse(localStorage.getItem('recentActivities')) || [];
+        recentActivities.unshift(activityItem);
+        
+        if (recentActivities.length > maxRecentActivities) {
+            recentActivities = recentActivities.slice(0, maxRecentActivities);
+        }
+
+        localStorage.setItem('recentActivities', JSON.stringify(recentActivities));
+        displayRecentActivities();
+        adjustHeights();
+    }
+
+    function tick() {
+        if (scanning && video.readyState === video.HAVE_ENOUGH_DATA) {
+            const canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            
+            try {
+                const code = jsQR(imageData.data, imageData.width, imageData.height, {
+                    inversionAttempts: "dontInvert",
+                });
+
+                if (code) {
+                    processCode(code.data);
+                }
+            } catch (error) {
+                console.error('QR scanning error:', error);
+                displayError('Error scanning QR code. Please try again.');
+            }
+        }
+        requestAnimationFrame(tick);
+    }
+
+    function processCode(data) {
+        const currentTime = Date.now();
+        if (currentTime - lastScanTime < scanCooldown) {
+            console.log('Scan cooldown in effect. Skipping this scan.');
+            return;
+        }
+        lastScanTime = currentTime;
+
+        fetch('{% url "demons:process_qr" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: JSON.stringify({qr_data: data})
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.success) {
+                if (data.needs_registration) {
+                    window.location.href = `{% url 'demons:visitors' %}?qr_code=${data.qr_code}`;
+                } else {
+                    displayScanResult(data);
+                    updateRecentActivity(data);
+                    playSuccessSound();
+                }
+            } else {
+                throw new Error(data.message || 'Invalid QR code or user not found.');
+            }
+        })
+        .catch(error => {
+            console.error('Error processing QR code:', error);
+            displayError(`Error processing QR code: ${error.message}`);
+        });
+    }
+
+    function displayScanResult(data) {
+        const scanResult = document.getElementById('scanResult');
+        const profilePhotoUrl = data.profile_photo ? 
+            (data.profile_photo.startsWith('http') || data.profile_photo.startsWith('/media/') ? 
+                data.profile_photo : 
+                '/media/' + data.profile_photo.replace(/^media\//, '')) : 
+            null;
+
+        const profilePhotoHtml = profilePhotoUrl ?
+            `<img src="${profilePhotoUrl}" alt="${data.name}" class="w-56 h-56 rounded-full object-cover mx-auto">` :
+            `<div class="w-56 h-56 rounded-full bg-gray-200 flex items-center justify-center mx-auto">
+                <span class="text-gray-500 text-7xl">${data.name.charAt(0)}</span>
+            </div>`;
+
+        scanResult.innerHTML = `
+            <div class="pt-4 pb-6 px-4 flex justify-center items-center">
+                ${profilePhotoHtml}
+            </div>
+            <div class="bg-green-100 border border-green-400 text-green-700 p-4 rounded relative mb-6">
+                <strong class="font-bold">Success!</strong>
+                <p>Name: ${data.name}</p>
+                <p>ID: ${data.user_id}</p>
+                <p>${data.info_type}: ${data.additional_info}</p>
+                <p>Status: ${data.action}</p>
+                <p>Timestamp: ${data.timestamp}</p>
+            </div>
+        `;
+    }
+
+    function displayError(message) {
+        const error = document.getElementById('error');
+        error.innerHTML = `
+            <div class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-4" role="alert">
+                <p class="font-bold">Error</p>
+                <p>${message}</p>
+            </div>
+        `;
+        error.classList.remove('hidden');
+        adjustHeights();
+    }
+
+    function playSuccessSound() {
+        const audio = new Audio('data:audio/mp3;base64,//uQxAAAAAAAAAAAAAAAAAAAAAAASW5mbwAAAA8AAAADAAAGhgBVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVWqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqr///////////////////////////////////////////8AAAA8TEFNRTMuOTlyBK8AAAAAAAAAABSAJAOkQgAAgAAABobXqlfKAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA//sQxAADwAABpAAAACAAADSAAAAETEFNRTMuOTkuNVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVU=');
+        audio.play();
+    }
+
+    function adjustHeights() {
+        const scannerLogContainer = document.getElementById('scannerLogContainer');
+        const qrScannerSection = document.getElementById('qrScannerSection');
+        const recentLogSection = document.getElementById('recentLogSection');
+        const recentActivity = document.getElementById('recentActivity');
+
+        const containerHeight = scannerLogContainer.offsetHeight;
+        qrScannerSection.style.height = `${containerHeight}px`;
+        recentLogSection.style.height = `${containerHeight}px`;
+        recentActivity.style.height = `${containerHeight - 56}px`; // 56px for the heading and padding
+    }
+
+    function handleDimensionChange() {
+        const qrScannerSection = document.getElementById('qrScannerSection');
+        const recentLogSection = document.getElementById('recentLogSection');
+
+        const resizeObserver = new ResizeObserver(() => {
+            adjustHeights();
+        });
+
+        resizeObserver.observe(qrScannerSection);
+        resizeObserver.observe(recentLogSection);
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        console.log("DOM fully loaded");
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            console.error("getUserMedia is not supported in this browser");
+            displayError('Camera access is not supported in this browser. Please use a modern browser like Chrome, Firefox, or Edge.');
+            return;
+        }
+        initializeCamera();
+        displayRecentActivities();
+        window.addEventListener('resize', adjustHeights);
+        adjustHeights();
+        handleDimensionChange();
+    });
+</script>
+{% endblock %}
+

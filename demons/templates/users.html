@@ -1,0 +1,186 @@
+{% extends 'components/admin_layout.html' %}
+{% load static %}
+
+{% block content %}
+<div class="min-h-screen bg-[#F7F7F9] p-8">
+    <h1 class="text-2xl font-semibold text-gray-900 mb-6">Clients</h1>
+
+    {% if messages %}
+    <div class="mb-4">
+        {% for message in messages %}
+        <div class="{% if message.tags == 'success' %}bg-green-100 border-green-400 text-green-700{% else %}bg-red-100 border-red-400 text-red-700{% endif %} px-4 py-3 rounded relative border" role="alert">
+            <span class="block sm:inline">{{ message }}</span>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Add User Form -->
+    <div class="bg-white rounded-lg shadow-sm p-6 mb-8">
+        <h2 class="text-lg font-medium text-gray-900 mb-4">Add New Client</h2>
+        <form method="post" action="{% url 'demons:add_user' %}" class="space-y-4">
+            {% csrf_token %}
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label for="name" class="block text-sm font-medium text-gray-700">Name</label>
+                    <input type="text" name="name" id="name" required 
+                           class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                </div>
+                <div>
+                    <label for="user_type" class="block text-sm font-medium text-gray-700">Client Type</label>
+                    <select name="user_type" id="user_type" required 
+                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                        <option value="student">Student</option>
+                        <option value="employee">Employee</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="id_number" class="block text-sm font-medium text-gray-700">ID Number</label>
+                    <input type="text" name="id_number" id="id_number" required 
+                           class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                </div>
+                <div>
+                    <label for="department_or_course" class="block text-sm font-medium text-gray-700" id="department_or_course_label">Department/Course</label>
+                    <input type="text" name="department_or_course" id="department_or_course" required 
+                           class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                </div>
+            </div>
+            <div class="flex justify-end">
+                <button type="submit" 
+                        class="inline-flex justify-center rounded-md border border-transparent bg-indigo-600 py-2 px-4 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
+                    Add Client
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- User List Table -->
+    <div class="bg-white rounded-lg shadow-sm p-6">
+        <div class="flex justify-between items-center mb-4">
+            <div class="flex items-center space-x-4">
+                <h2 class="text-lg font-medium text-gray-900">Client List</h2>
+                <select id="user_list_type" class="rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                    <option value="student">Students</option>
+                    <option value="employee">Employees</option>
+                </select>
+            </div>
+            <div class="w-64">
+                <input type="text" id="searchInput" placeholder="Search by name..." 
+                       class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                       autocomplete="off">
+            </div>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID Number</th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" id="department_or_course_header">Department/Course</th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">QR Code</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200" id="student_list">
+                    {% for student in students %}
+                    <tr class="user-row">
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm font-medium text-gray-900">{{ student.name }}</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm text-gray-500">Student</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm text-gray-500">{{ student.student_id }}</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm text-gray-500">{{ student.course }}</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            {% if student.qr_code %}
+                            <img src="{{ student.qr_code.url }}" alt="QR Code" class="h-10 w-10">
+                            {% else %}
+                            <span class="text-sm text-gray-500">No QR Code</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                <tbody class="bg-white divide-y divide-gray-200" id="employee_list" style="display: none;">
+                    {% for employee in employees %}
+                    <tr class="user-row">
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm font-medium text-gray-900">{{ employee.name }}</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm text-gray-500">Employee</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm text-gray-500">{{ employee.employee_id }}</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm text-gray-500">{{ employee.department }}</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            {% if employee.qr_code %}
+                            <img src="{{ employee.qr_code.url }}" alt="QR Code" class="h-10 w-10">
+                            {% else %}
+                            <span class="text-sm text-gray-500">No QR Code</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const userTypeSelect = document.getElementById('user_type');
+    const departmentOrCourseLabel = document.getElementById('department_or_course_label');
+    const departmentOrCourseInput = document.getElementById('department_or_course');
+    const departmentOrCourseHeader = document.getElementById('department_or_course_header');
+    const userListTypeSelect = document.getElementById('user_list_type');
+    const studentList = document.getElementById('student_list');
+    const employeeList = document.getElementById('employee_list');
+    const searchInput = document.getElementById('searchInput');
+
+    function updateAddUserForm() {
+        const isStudent = userTypeSelect.value === 'student';
+        departmentOrCourseLabel.textContent = isStudent ? 'Course' : 'Department';
+        departmentOrCourseInput.placeholder = isStudent ? 'Enter course' : 'Enter department';
+    }
+
+    function updateUserList() {
+        const isStudent = userListTypeSelect.value === 'student';
+        studentList.style.display = isStudent ? '' : 'none';
+        employeeList.style.display = isStudent ? 'none' : '';
+        departmentOrCourseHeader.textContent = isStudent ? 'Course' : 'Department';
+        filterUsers(); // Re-apply search filter when switching lists
+    }
+
+    function filterUsers() {
+        const searchTerm = searchInput.value.toLowerCase();
+        const currentList = userListTypeSelect.value === 'student' ? studentList : employeeList;
+        const rows = currentList.getElementsByClassName('user-row');
+
+        Array.from(rows).forEach(row => {
+            const nameCell = row.querySelector('td:first-child div');
+            const name = nameCell.textContent.toLowerCase();
+            row.style.display = name.includes(searchTerm) ? '' : 'none';
+        });
+    }
+
+    userTypeSelect.addEventListener('change', updateAddUserForm);
+    userListTypeSelect.addEventListener('change', updateUserList);
+    searchInput.addEventListener('input', filterUsers);
+    
+    // Initial setup
+    updateAddUserForm();
+    updateUserList();
+});
+</script>
+{% endblock %}
+

@@ -1,0 +1,188 @@
+* {
+    margin: 0;
+    padding: 0;
+    text-decoration: none;
+    box-sizing: border-box;
+}
+
+.container {
+    max-width: 700px;
+    width: 100%;
+    margin-left: 20%;
+    background-color: #ffffff;
+    padding: 25px 30px;
+    border-radius: 5px;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 5px 10px rgba(0,0,0,0.15);
+}
+
+.user_details .input_box input {
+    height: 45px;
+    width: 100%;
+    outline: none;
+    font-size: 16px;
+    border-radius: 5px;
+    padding-left: 15px;
+    border: 1px solid #ccc;
+    border-bottom-width: 2px;
+    transition: all 0.3s ease;
+}
+
+/* Additional styles for the security dashboard */
+.layout-container {
+    display: flex;
+    min-height: 100vh;
+    background-color: #f3f4f6;
+}
+
+.sidebar {
+    width: 250px;
+    background-color: white;
+    padding: 1.5rem;
+    box-shadow: 2px 0 5px rgba(0,0,0,0.05);
+}
+
+.sidebar-title {
+    font-size: 1.5rem;
+    font-weight: bold;
+    margin-bottom: 2rem;
+    color: #111827;
+}
+
+.nav-item {
+    display: flex;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    margin: 0.5rem 0;
+    color: #4b5563;
+    border-radius: 0.375rem;
+    transition: all 0.2s;
+}
+
+.nav-item:hover {
+    background-color: #f3f4f6;
+    color: #2563eb;
+}
+
+.nav-item.active {
+    background-color: #e5e7eb;
+    color: #2563eb;
+}
+
+.nav-item svg {
+    width: 1.25rem;
+    height: 1.25rem;
+    margin-right: 0.75rem;
+}
+
+.main-content {
+    flex: 1;
+    padding: 2rem;
+}
+
+.right-sidebar {
+    width: 300px;
+    background-color: white;
+    padding: 1.5rem;
+    box-shadow: -2px 0 5px rgba(0,0,0,0.05);
+}
+
+.section-title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+    color: #111827;
+}
+
+.live-feed {
+    background-color: white;
+    padding: 1.5rem;
+    border-radius: 0.5rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    margin-bottom: 1.5rem;
+}
+
+.video-container {
+    width: 400px;  /* Fixed width */
+    height: 300px; /* Fixed height */
+    margin: 0 auto;
+    background-color: #f3f4f6;
+    border-radius: 0.375rem;
+    overflow: hidden;
+    border: 1px solid #e5e7eb;
+}
+
+.scan-result {
+    background-color: white;
+    padding: 1.5rem;
+    border-radius: 0.5rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    max-width: 400px;
+    margin: 1.5rem auto;
+}
+
+.scan-result h2 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+    color: #111827;
+}
+
+.scan-details p {
+    margin-bottom: 0.5rem;
+    line-height: 1.5;
+}
+
+.permission-status {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid #e5e7eb;
+    font-weight: 500;
+}
+
+.permission-status.permitted {
+    color: #059669;
+}
+
+.permission-status.not-permitted {
+    color: #dc2626;
+}
+
+.activity-item {
+    padding: 1rem;
+    border-radius: 0.375rem;
+    margin-bottom: 0.75rem;
+}
+
+.activity-item.entry {
+    background-color: #dcfce7;
+}
+
+.activity-item.exit {
+    background-color: #fee2e2;
+}
+
+.activity-name {
+    font-weight: 600;
+    color: #111827;
+}
+
+.activity-details {
+    font-size: 0.875rem;
+    color: #4b5563;
+}
+
+.activity-status {
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+.activity-status.entry {
+    color: #16a34a;
+}
+
+.activity-status.exit {
+    color: #dc2626;
+}
+

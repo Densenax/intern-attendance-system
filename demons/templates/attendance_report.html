@@ -1,0 +1,230 @@
+{% extends 'components/admin_layout.html' %}
+{% load static %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-100 py-6 flex flex-col justify-center sm:py-12">
+    <div class="relative py-3 sm:max-w-7xl sm:mx-auto w-full px-4">
+        <div class="relative px-6 py-10 bg-white shadow-lg sm:rounded-3xl sm:p-16">
+            <div class="max-w-full mx-auto">
+                <div class="mb-8">
+                    <h1 class="text-3xl font-semibold text-gray-900">Attendance Report</h1>
+                </div>
+                <div class="space-y-8">
+                    <!-- Search and Date Range Form -->
+                    <div class="bg-gray-50 p-8 rounded-lg">
+                        <form method="get" action="" class="space-y-6" id="reportForm">
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                                <div>
+                                    <label for="start_date" class="block text-lg font-medium text-gray-700 mb-2">Start Date</label>
+                                    <input type="date" name="start_date" id="start_date" value="{{ start_date|date:'Y-m-d' }}"
+                                           class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 text-lg py-3 px-4">
+                                    <label for="attendanceType" class="block text-lg font-medium text-gray-700 mt-4 mb-2">Attendance Type</label>
+                                    <select id="attendanceType" name="attendance_type" class="mt-1 block w-full pl-3 pr-10 py-3 text-lg border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 rounded-md">
+                                        <option value="all">All Attendance</option>
+                                        <option value="student">Student Attendance</option>
+                                        <option value="employee">Employee Attendance</option>
+                                        <option value="visitor">Visitor Attendance</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label for="end_date" class="block text-lg font-medium text-gray-700 mb-2">End Date</label>
+                                    <input type="date" name="end_date" id="end_date" value="{{ end_date|date:'Y-m-d' }}"
+                                           class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 text-lg py-3 px-4">
+                                </div>
+                                <div>
+                                    <label for="search" class="block text-lg font-medium text-gray-700 mb-2">Search by Name or ID</label>
+                                    <input type="text" name="search" id="searchInput" value="{{ search_query }}"
+                                           class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 text-lg py-3 px-4"
+                                           placeholder="Search by name or ID">
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- Attendance Summary -->
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                        <div class="bg-white p-6 rounded-lg shadow">
+                            <h3 class="text-lg font-medium text-gray-900">Total Students</h3>
+                            <p class="text-3xl font-bold text-blue-600">{{ student_count }}</p>
+                        </div>
+                        <div class="bg-white p-6 rounded-lg shadow">
+                            <h3 class="text-lg font-medium text-gray-900">Total Employees</h3>
+                            <p class="text-3xl font-bold text-green-600">{{ employee_count }}</p>
+                        </div>
+                        <div class="bg-white p-6 rounded-lg shadow">
+                            <h3 class="text-lg font-medium text-gray-900">Total Visitors</h3>
+                            <p class="text-3xl font-bold text-purple-600">{{ visitor_count }}</p>
+                        </div>
+                    </div>
+
+                    <!-- Student Attendance -->
+                    {% if student_attendance %}
+                    <div class="bg-white shadow rounded-lg overflow-hidden">
+                        <div class="px-6 py-5 border-b border-gray-200 flex justify-between items-center">
+                            <h2 class="text-xl font-semibold text-gray-900">Student Attendance</h2>
+                            <button type="button" id="generatePdfBtn" class="inline-flex items-center px-6 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                                Generate Complete PDF Report
+                            </button>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-gray-200">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID Number</th>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Course</th>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Time In</th>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Time Out</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="bg-white divide-y divide-gray-200">
+                                    {% for attendance in student_attendance %}
+                                    <tr>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ attendance.name }}</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ attendance.id_number }}</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ attendance.course }}</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ attendance.date|date:"F d, Y" }}</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ attendance.time_in|date:"h:i:s A" }}</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                            {% if attendance.time_out %}
+                                                {{ attendance.time_out|date:"h:i:s A" }}
+                                            {% else %}
+                                                -
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Employee Attendance -->
+                    {% if employee_attendance %}
+                    <div class="bg-white shadow rounded-lg overflow-hidden mt-8">
+                        <div class="px-6 py-5 border-b border-gray-200">
+                            <h2 class="text-xl font-semibold text-gray-900">Employee Attendance</h2>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-gray-200">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID Number</th>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Department</th>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Time In</th>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Time Out</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="bg-white divide-y divide-gray-200">
+                                    {% for attendance in employee_attendance %}
+                                    <tr>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ attendance.name }}</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ attendance.id_number }}</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ attendance.department }}</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ attendance.date|date:"F d, Y" }}</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ attendance.time_in|date:"h:i:s A" }}</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                            {% if attendance.time_out %}
+                                                {{ attendance.time_out|date:"h:i:s A" }}
+                                            {% else %}
+                                                -
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Visitor Attendance -->
+                    {% if visitor_attendance %}
+                    <div class="bg-white shadow rounded-lg overflow-hidden mt-8">
+                        <div class="px-6 py-5 border-b border-gray-200">
+                            <h2 class="text-xl font-semibold text-gray-900">Visitor Attendance</h2>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-gray-200">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contact Info</th>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Purpose</th>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">QR Code ID</th>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Time In</th>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Time Out</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="bg-white divide-y divide-gray-200">
+                                    {% for visitor in visitor_attendance %}
+                                    <tr>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ visitor.name }}</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ visitor.contact_info }}</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ visitor.purpose }}</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ visitor.qr_code.code_id }}</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ visitor.time_in|date:"F d, Y" }}</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ visitor.time_in|date:"h:i:s A" }}</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                            {% if visitor.time_out %}
+                                                {{ visitor.time_out|date:"h:i:s A" }}
+                                            {% else %}
+                                                -
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.getElementById('generatePdfBtn').addEventListener('click', function(e) {
+    e.preventDefault();
+    var form = document.getElementById('reportForm');
+    var formData = new FormData(form);
+    var attendanceType = document.getElementById('attendanceType').value;
+    formData.append('attendance_type', attendanceType);
+    var queryString = new URLSearchParams(formData).toString();
+    window.open("{% url 'demons:generate_pdf_report' %}?" + queryString, '_blank');
+});
+
+document.getElementById('searchInput').addEventListener('input', function(e) {
+    var searchTerm = e.target.value.toLowerCase();
+    var tables = document.querySelectorAll('table');
+    
+    tables.forEach(function(table) {
+        var rows = table.querySelectorAll('tbody tr');
+        rows.forEach(function(row) {
+            var name = row.querySelector('td:first-child').textContent.toLowerCase();
+            var id = row.querySelector('td:nth-child(2)').textContent.toLowerCase();
+            if (name.includes(searchTerm) || id.includes(searchTerm)) {
+                row.style.display = '';
+            } else {
+                row.style.display = 'none';
+            }
+        });
+    });
+});
+
+document.getElementById('attendanceType').addEventListener('change', function(e) {
+    var generatePdfBtn = document.getElementById('generatePdfBtn');
+    var attendanceType = e.target.value;
+    var buttonText = 'Generate ' + (attendanceType === 'all' ? 'Complete' : attendanceType.charAt(0).toUpperCase() + attendanceType.slice(1)) + ' PDF Report';
+    generatePdfBtn.textContent = buttonText;
+});
+</script>
+{% endblock %}
+

@@ -1,0 +1,74 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'imcc-pink': '#FF69B4',
+                        'imcc-pink-dark': '#FF1493',
+                    }
+                }
+            }
+        }
+    </script>
+    {% block extra_head %}{% endblock %}
+</head>
+<body class="bg-gray-50">
+    <div class="flex min-h-screen">
+        <!-- Left Sidebar -->
+        <div class="w-64 bg-white shadow-md flex flex-col">
+            <!-- Logo and Title Section -->
+            <div class="p-4 bg-gradient-to-r from-imcc-pink to-imcc-pink-dark flex items-center justify-start">
+                <img src="{% static 'images/IMCC-Logo.png' %}" alt="IMCC Logo" class="h-10 w-auto mr-3">
+                <h1 class="text-xl font-bold text-white">Admin Dashboard</h1>
+            </div>
+            <nav class="mt-2 space-y-1 flex-grow">
+                <a href="{% url 'demons:admin_dashboard' %}" 
+                   class="flex items-center px-6 py-3 text-sm font-medium transition-colors duration-200 {% if request.resolver_match.url_name == 'admin_dashboard' %}bg-pink-100 text-imcc-pink-dark{% else %}text-gray-600 hover:bg-pink-50 hover:text-imcc-pink{% endif %}">
+                    <svg class="w-5 h-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                    </svg>
+                    Dashboard
+                </a>
+                <a href="{% url 'demons:users' %}" 
+                   class="flex items-center px-6 py-3 text-sm font-medium transition-colors duration-200 {% if request.resolver_match.url_name == 'users' %}bg-pink-100 text-imcc-pink-dark{% else %}text-gray-600 hover:bg-pink-50 hover:text-imcc-pink{% endif %}">
+                    <svg class="w-5 h-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                    </svg>
+                    Client Type
+                </a>
+                <a href="{% url 'demons:attendance_report' %}" 
+                   class="flex items-center px-6 py-3 text-sm font-medium transition-colors duration-200 {% if request.resolver_match.url_name == 'attendance_report' %}bg-pink-100 text-imcc-pink-dark{% else %}text-gray-600 hover:bg-pink-50 hover:text-imcc-pink{% endif %}">
+                    <svg class="w-5 h-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                    </svg>
+                    Attendance Report
+                </a>
+            </nav>
+            <div class="mt-auto pt-8 mb-8 border-t border-gray-200">
+                <a href="{% url 'demons:logout' %}" class="flex items-center px-6 py-3 text-sm font-medium text-red-600 transition-colors duration-200 hover:bg-red-50 hover:text-red-700">
+                    <svg class="w-5 h-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                    </svg>
+                    Logout
+                </a>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="flex-1 overflow-x-hidden overflow-y-auto">
+            {% block content %}{% endblock %}
+        </div>
+    </div>
+
+    {% block extra_scripts %}{% endblock %}
+</body>
+</html>
+
