@@ -24,6 +24,5 @@
         "dest": "qrcode_project/wsgi.py"
       }
     ],
-    "outputDirectory": "staticfiles_build",
-    "cleanUrls": true
+    "outputDirectory": "staticfiles_build"
   }
