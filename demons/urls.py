@@ -1,6 +1,6 @@
 from django.urls import path
 from . import views
-from reports_views import generate_employee_csv_report, generate_employee_excel_report, generate_excel_report
+from .reports_views import generate_employee_csv_report, generate_employee_excel_report, generate_excel_report
 
 app_name = 'demons'
 
