@@ -1,7 +1,3 @@
-echo "Installing SQLite3"
-apt-get update
-apt-get install -y libsqlite3-dev
-
 echo "Building project packages..."
 python3 -m pip install -r requirements.txt
 
