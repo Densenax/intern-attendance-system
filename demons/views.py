@@ -1,35 +1,42 @@
-from django.shortcuts import render, redirect
-from django.contrib import messages
-from django.contrib.auth import authenticate, login, logout
-from django.contrib.auth.decorators import login_required, user_passes_test
-from django.db.models import Q
-from django.views.decorators.csrf import csrf_protect, csrf_exempt
-from django.http import JsonResponse, HttpResponseForbidden
-from django.http import HttpResponse
-from django.utils import timezone
-from .models import Student, Employee, Attendance, User, Visitor, Event, TempVisitor, QRCode
-import json
-import uuid
-import qrcode
-from io import BytesIO
-from django.core.files.base import ContentFile
-from django.middleware.csrf import get_token
-from django.urls import reverse
-from itertools import chain
-from .models import Attendance
-from django.core.files import File
-from django.contrib.auth.forms import PasswordChangeForm
-from django.contrib.auth import update_session_auth_hash
-from django.template import loader
-from django.db.models.functions import TruncDate
-from django.db.models import Count
+#Imports - standard python modules
 from datetime import datetime, timedelta
-from django.template.loader import get_template
-from xhtml2pdf import pisa
 from dateutil import parser
-from django.shortcuts import get_object_or_404
+import json
+from io import BytesIO
+from itertools import chain
+import qrcode
+import uuid
+#Imports - external packages
+from xhtml2pdf import pisa
+#Imports - Django modules
+from django.core.files import File
+from django.core.files.base import ContentFile
 from django.core.serializers.json import DjangoJSONEncoder
 
+from django.contrib import messages
+from django.contrib.auth import authenticate, login, logout, update_session_auth_hash
+from django.contrib.auth.decorators import login_required, user_passes_test
+from django.contrib.auth.forms import PasswordChangeForm
+
+from django.db.models import Q, Count
+from django.db.models.functions import TruncDate
+
+
+from django.http import JsonResponse, HttpResponse, HttpResponseForbidden
+
+from django.middleware.csrf import get_token
+
+from django.shortcuts import render, redirect, get_object_or_404
+from django.template.loader import get_template
+from django.urls import reverse
+from django.utils import timezone
+from django.views.decorators.csrf import csrf_protect, csrf_exempt
+
+#Imports - Custom Code
+from .models import Student, Employee, Attendance, User, Event, QRCode
+
+####
+#Authentication
 def is_authorized_staff(user):
     return user.is_superuser or user.is_staff or (hasattr(user, 'role') and user.role == 'security')
 
@@ -74,26 +81,22 @@ def is_admin(user):
 def is_security(user):
     return user.is_authenticated and user.role == User.SECURITY
 
+#Dashboard + User Register
 @login_required
 @user_passes_test(is_admin)
 def admin_dashboard(request):
-    # Get visitor counts
-    visitor_check_ins = Visitor.objects.filter(time_in__isnull=False).count()
-    visitor_check_outs = Visitor.objects.filter(time_out__isnull=False).count()
     
     # Fetch all events
     all_events = Event.objects.all()
     initial_events = json.dumps(list(all_events.values('id', 'title', 'start')), cls=DjangoJSONEncoder)
 
     context = {
-        'total_check_ins': Attendance.get_total_check_ins() + visitor_check_ins,
-        'total_check_outs': Attendance.get_total_check_outs() + visitor_check_outs,
+        'total_check_ins': Attendance.get_total_check_ins(),
+        'total_check_outs': Attendance.get_total_check_outs(),
         'student_check_ins': Attendance.get_student_check_ins(),
         'student_check_outs': Attendance.get_student_check_outs(),
         'employee_check_ins': Attendance.get_employee_check_ins(),
         'employee_check_outs': Attendance.get_employee_check_outs(),
-        'visitor_check_ins': visitor_check_ins,
-        'visitor_check_outs': visitor_check_outs,
         'initial_events': initial_events,
     }
     return render(request, 'admin_dashboard.html', context)
@@ -163,19 +166,14 @@ def add_user(request):
 @login_required
 @user_passes_test(is_authorized_staff)
 def security_dashboard(request):
-    # Get visitor counts
-    visitor_check_ins = Visitor.objects.filter(time_in__isnull=False).count()
-    visitor_check_outs = Visitor.objects.filter(time_out__isnull=False).count()
     
     context = {
-        'total_check_ins': Attendance.get_total_check_ins() + visitor_check_ins,
-        'total_check_outs': Attendance.get_total_check_outs() + visitor_check_outs,
+        'total_check_ins': Attendance.get_total_check_ins(),
+        'total_check_outs': Attendance.get_total_check_outs(),
         'student_check_ins': Attendance.get_student_check_ins(),
         'student_check_outs': Attendance.get_student_check_outs(),
         'employee_check_ins': Attendance.get_employee_check_ins(),
         'employee_check_outs': Attendance.get_employee_check_outs(),
-        'visitor_check_ins': visitor_check_ins,
-        'visitor_check_outs': visitor_check_outs,
     }
     return render(request, 'security_dashboard.html', context)
 
@@ -274,55 +272,11 @@ def register_employee(request):
 
     return render(request, 'register_employee.html')
 
-@login_required
-@user_passes_test(is_security)
-def register_visitor(request):
-    if request.method == 'POST':
-        qr_code_id = request.POST.get('qr_code')
-        if not qr_code_id:
-            messages.error(request, 'No QR code provided')
-            return redirect('demons:visitors')
-
-        try:
-            qr_code = QRCode.objects.get(code_id=qr_code_id)
-            if qr_code.is_registered:
-                messages.error(request, 'QR code is already in use')
-                return redirect('demons:visitors')
-
-            # Create temporary visitor record
-            temp_visitor = TempVisitor.objects.create(
-                qr_code=qr_code,
-                name=f"{request.POST['first_name']} {request.POST['last_name']}",
-                contact_info=request.POST['contact_info'],
-                purpose=request.POST['purpose']
-            )
-            
-            # Update QR code status
-            qr_code.is_active = False
-            qr_code.is_registered = True
-            qr_code.save()
-            
-            messages.success(request, 'Visitor registered successfully!')
-            return redirect('demons:visitors')
-
-        except QRCode.DoesNotExist:
-            messages.error(request, 'Invalid QR code')
-            return redirect('demons:visitors')
-
-    return redirect('demons:visitors')
-
+#Scan QR
 @login_required
 @user_passes_test(is_security)
 def scan(request):
     return render(request, 'scan.html', {'user': request.user})
-
-@login_required
-@user_passes_test(lambda u: u.role == 'security' or u.role == 'admin')
-@login_required
-@user_passes_test(is_authorized_staff)
-def visitors(request):
-    visitors = Visitor.objects.all().order_by('-id')
-    return render(request, 'visitors.html', {'visitors': visitors})
 
 @csrf_exempt
 def process_qr(request):
@@ -337,18 +291,7 @@ def process_qr(request):
                     'message': "No QR code data provided"
                 })
 
-            # First check if it's a visitor QR code (4 digits)
-            if len(qr_data) == 4 and qr_data.isdigit():
-                try:
-                    qr_code = QRCode.objects.get(code_id=qr_data)
-                    return handle_visitor_attendance(qr_code)
-                except QRCode.DoesNotExist:
-                    return JsonResponse({
-                        'success': False,
-                        'message': "Invalid visitor QR code"
-                    })
-
-            # If not a visitor QR code, try to find a student or employee
+            # Try to find a student or employee
             try:
                 student = Student.objects.get(id=qr_data)
                 return handle_attendance(student, 'Student')
@@ -373,6 +316,7 @@ def process_qr(request):
         'message': "Invalid request method"
     })
 
+#Helper method - attendance
 def handle_attendance(user, user_type):
     current_time = timezone.localtime(timezone.now())
     last_attendance = Attendance.objects.filter(
@@ -404,49 +348,7 @@ def handle_attendance(user, user_type):
         'profile_photo': user.profile_photo.url if user.profile_photo else None,
     })
 
-def handle_visitor_attendance(qr_code):
-    temp_visitor = TempVisitor.objects.filter(qr_code=qr_code).first()
-    
-    if temp_visitor:
-        current_time = timezone.localtime(timezone.now())
-        if temp_visitor.time_in:
-            # Visitor is checking out
-            visitor = temp_visitor.move_to_permanent()
-            visitor.time_out = current_time
-            visitor.save()
-            return JsonResponse({
-                'success': True,
-                'name': visitor.name,
-                'user_type': 'Visitor',
-                'user_id': qr_code.code_id,
-                'additional_info': visitor.purpose,
-                'info_type': 'Purpose',
-                'action': 'Checked Out',
-                'timestamp': current_time.strftime("%I:%M:%S %p"),
-            })
-        else:
-            # Visitor is checking in
-            temp_visitor.time_in = current_time
-            temp_visitor.save()
-            return JsonResponse({
-                'success': True,
-                'name': temp_visitor.name,
-                'user_type': 'Visitor',
-                'user_id': qr_code.code_id,
-                'additional_info': temp_visitor.purpose,
-                'info_type': 'Purpose',
-                'action': 'Checked In',
-                'timestamp': current_time.strftime("%I:%M:%S %p"),
-            })
-    else:
-        # QR code is not registered - return registration needed response
-        return JsonResponse({
-            'success': True,
-            'needs_registration': True,
-            'qr_code': qr_code.code_id,
-            'message': "Please register visitor information"
-        })
-
+#Settings
 @login_required
 @user_passes_test(is_authorized_staff)
 def settings(request):
@@ -471,6 +373,7 @@ def settings(request):
 
     return render(request, 'settings.html')
 
+#Reports
 @login_required
 @user_passes_test(is_admin)
 def attendance_report(request):
@@ -494,12 +397,6 @@ def attendance_report(request):
     start_datetime = timezone.make_aware(datetime.combine(start_date, datetime.min.time()))
     end_datetime = timezone.make_aware(datetime.combine(end_date, datetime.max.time()))
 
-    # Get visitor counts for the date range
-    #visitor_count = Visitor.objects.filter(
-    #    Q(time_in__range=(start_datetime, end_datetime)) |
-    #    Q(time_out__range=(start_datetime, end_datetime))
-    #).count()
-
     # Get student and employee counts from Attendance model
     student_count = Attendance.objects.filter(
         check_in_timestamp__range=(start_datetime, end_datetime),
@@ -510,16 +407,10 @@ def attendance_report(request):
         check_in_timestamp__range=(start_datetime, end_datetime),
         employee__isnull=False
     ).values('employee').distinct().count()
-    
-    visitor_count = Visitor.objects.filter(
-        Q(time_in__range=(start_datetime, end_datetime)) |
-        Q(time_out__range=(start_datetime, end_datetime))
-    ).count()
 
     # Process attendance data for template
     student_attendance = []
     employee_attendance = []
-    visitor_attendance = []
 
     # Apply search filter if provided
     if search_query:
@@ -531,11 +422,6 @@ def attendance_report(request):
         # Check for employee matches
         employee_matches = Employee.objects.filter(
             Q(name__icontains=search_query) | Q(employee_id__icontains=search_query)
-        ).exists()
-        
-        # Check for visitor matches
-        visitor_matches = Visitor.objects.filter(
-            Q(name__icontains=search_query) | Q(contact_info__icontains=search_query)
         ).exists()
 
         if student_matches:
@@ -575,22 +461,6 @@ def attendance_report(request):
                     'time_in': record.check_in_timestamp,
                     'time_out': record.check_out_timestamp
                 })
-        
-        elif visitor_matches:
-            visitor_attendance = Visitor.objects.filter(
-                Q(time_in__range=(start_datetime, end_datetime)) |
-                Q(time_out__range=(start_datetime, end_datetime))
-            ).order_by('time_in')
-
-            if search_query:
-                visitor_attendance = visitor_attendance.filter(
-                    Q(name__icontains=search_query) | 
-                    Q(contact_info__icontains=search_query)
-                )
-
-            visitor_attendance = list(visitor_attendance.values(
-                'name', 'contact_info', 'purpose', 'time_in', 'time_out'
-            ))
     else:
         # If no search query, get all records
         student_records = Attendance.objects.filter(
@@ -623,19 +493,9 @@ def attendance_report(request):
                 'time_out': record.check_out_timestamp
             })
 
-        visitor_attendance = Visitor.objects.filter(
-            Q(time_in__range=(start_datetime, end_datetime)) |
-            Q(time_out__range=(start_datetime, end_datetime))
-        ).order_by('time_in')
-
-        visitor_attendance = list(visitor_attendance.values(
-            'name', 'contact_info', 'purpose', 'time_in', 'time_out'
-        ))
-
     # Sort all attendance lists by date and time
     student_attendance.sort(key=lambda x: (x['date'], x['time_in']))
     employee_attendance.sort(key=lambda x: (x['date'], x['time_in']))
-    visitor_attendance.sort(key=lambda x: (x['time_in'] if x['time_in'] else x['time_out']))
 
     context = {
         'start_date': start_date,
@@ -643,10 +503,8 @@ def attendance_report(request):
         'search_query': search_query,
         'student_attendance': student_attendance,
         'employee_attendance': employee_attendance,
-        'visitor_attendance': visitor_attendance,
         'student_count': student_count,
         'employee_count': employee_count,
-        'visitor_count': visitor_count,
     }
 
     return render(request, 'attendance_report.html', context)
@@ -743,7 +601,6 @@ def generate_pdf_report(request):
     # Initialize attendance data lists
     student_attendance = []
     employee_attendance = []
-    visitor_attendance = []
 
     # Only fetch the selected attendance type data
     if attendance_type in ['all', 'student']:
@@ -790,32 +647,10 @@ def generate_pdf_report(request):
                 'time_out': record.check_out_timestamp
             })
 
-    if attendance_type in ['all', 'visitor']:
-        visitor_records = Visitor.objects.filter(
-            time_in__range=(start_datetime, end_datetime)
-        )
-
-        if search_query:
-            visitor_records = visitor_records.filter(
-                Q(name__icontains=search_query) |
-                Q(contact_info__icontains=search_query)
-            )
-
-        for visitor in visitor_records:
-            visitor_attendance.append({
-                'name': visitor.name,
-                'contact_info': visitor.contact_info,
-                'purpose': visitor.purpose,
-                'qr_code_id': visitor.qr_code.code_id if visitor.qr_code else 'N/A',
-                'date': visitor.time_in.date(),
-                'time_in': visitor.time_in,
-                'time_out': visitor.time_out
-            })
 
     # Sort all attendance lists by date and time
     student_attendance.sort(key=lambda x: (x['date'], x['time_in']))
     employee_attendance.sort(key=lambda x: (x['date'], x['time_in']))
-    visitor_attendance.sort(key=lambda x: (x['date'], x['time_in']))
 
     # Prepare context for the template
     context = {
@@ -825,7 +660,6 @@ def generate_pdf_report(request):
         'attendance_type': attendance_type,
         'student_attendance': student_attendance if attendance_type in ['all', 'student'] else [],
         'employee_attendance': employee_attendance if attendance_type in ['all', 'employee'] else [],
-        'visitor_attendance': visitor_attendance if attendance_type in ['all', 'visitor'] else [],
     }
 
     # Render the HTML template
@@ -842,9 +676,7 @@ def generate_pdf_report(request):
         return response
     return HttpResponse('Error Rendering PDF', status=400)
 
-
-
-
+#Calendar Events
 @login_required
 @user_passes_test(is_admin)
 def calendar_events(request):
@@ -912,50 +744,10 @@ def delete_event(request):
             return JsonResponse({'status': 'error', 'message': 'Event not found'}, status=404)
         except ValueError:
             return JsonResponse({'status': 'error', 'message': 'Invalid event ID'}, status=400)
-    return JsonResponse({'status': 'error', 'message': 'Invalid request method'}, status=400)
-
-@login_required
-@user_passes_test(is_security)
-def visitor_check_in(request):
-    if request.method == 'POST':
-        # Get available QR code
-        qr_code = QRCode.get_available_code()
-        if not qr_code:
-            messages.error(request, 'No QR codes available')
-            return redirect('demons:visitors')
-            
-        # Create temporary visitor record
-        temp_visitor = TempVisitor.objects.create(
-            qr_code=qr_code,
-            name=request.POST['name'],
-            contact_info=request.POST['contact_info'],
-            purpose=request.POST['purpose']
-        )
-        
-        # Mark QR code as in use
-        qr_code.is_active = False
-        qr_code.save()
-        
-        messages.success(request, f'Visitor checked in with QR code {qr_code.code_id}')
-        return redirect('demons:visitors')
-    
-    return redirect('demons:visitors')
-    
-@login_required
-@user_passes_test(is_security)
-def visitor_check_out(request, code_id):
-    # Get temporary visitor record
-    temp_visitor = get_object_or_404(TempVisitor, qr_code__code_id=code_id)
-    
-    # Move to permanent record
-    visitor = temp_visitor.move_to_permanent()
-    
-    messages.success(request, f'Visitor {visitor.name} checked out successfully')
-    return redirect('demons:visitors')
+    return JsonResponse({'status': 'error', 'message': 'Invalid request method'}, status=400)    
 
 def csrf_failure(request, reason=""):
     print(f"CSRF Failure Reason: {reason}")
     print(f"Request Method: {request.method}")
     print(f"Request Headers: {request.headers}")
     return HttpResponseForbidden(f'CSRF verification failed. Reason: {reason}')
-
